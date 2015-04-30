@@ -153,19 +153,6 @@ public:
    */
   void setCost(unsigned int index, unsigned char cost);
 
-
-  /**
-   * @brief Get the flag determining if data propagation to sub-maps is enabled
-   * @return True if data propagation is enabled, False otherwise.
-   */
-  bool getPropagationEnabled() const;
-
-  /**
-   * @brief Set the flag to enable or disable data propagation to sub-maps
-   * @param New value (default true)
-   */
-  void setPropagationEnabled(bool b = true);
-
   /**
    * @brief  Convert from map coordinates to world coordinates
    * @param  mx The x map coordinate
