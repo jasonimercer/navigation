@@ -42,11 +42,12 @@
 #include <algorithm>
 #include <vector>
 
-using namespace std;
+using std::vector;
 
 namespace costmap_2d
 {
-LayeredCostmap::LayeredCostmap(string global_frame, bool rolling_window, bool track_unknown) :
+
+LayeredCostmap::LayeredCostmap(std::string global_frame, bool rolling_window, bool track_unknown) :
     costmap_(), global_frame_(global_frame), rolling_window_(rolling_window), initialized_(false), size_locked_(false)
 {
   if (track_unknown)
@@ -77,7 +78,6 @@ void LayeredCostmap::resizeMap(unsigned int size_x, unsigned int size_y, double 
 
 void LayeredCostmap::updateMap(double robot_x, double robot_y, double robot_yaw)
 {
-
   // if we're using a rolling buffer costmap... we need to update the origin using the robot's position
   if (rolling_window_)
   {
@@ -103,9 +103,9 @@ void LayeredCostmap::updateMap(double robot_x, double robot_y, double robot_yaw)
   costmap_.worldToMapEnforceBounds(maxx_, maxy_, xn, yn);
 
   x0 = std::max(0, x0);
-  xn = std::min(int(costmap_.getSizeInCellsX()), xn + 1);
+  xn = std::min(static_cast<int>(costmap_.getSizeInCellsX()), xn + 1);
   y0 = std::max(0, y0);
-  yn = std::min(int(costmap_.getSizeInCellsY()), yn + 1);
+  yn = std::min(static_cast<int>(costmap_.getSizeInCellsY()), yn + 1);
 
   ROS_DEBUG("Updating area x: [%d, %d] y: [%d, %d]", x0, xn, y0, yn);
 
@@ -114,14 +114,20 @@ void LayeredCostmap::updateMap(double robot_x, double robot_y, double robot_yaw)
 
   costmap_.resetMap(x0, y0, xn, yn);
 
+  // we will record a list of actions taken on the costmaps so we can later
+  // make decisions about what needs to be inflated and what does not.
+  LayerActions actions;
+
   {
     boost::unique_lock < boost::shared_mutex > lock(*(costmap_.getLock()));
     for (vector<boost::shared_ptr<Layer> >::iterator plugin = plugins_.begin(); plugin != plugins_.end();
         ++plugin)
     {
-      (*plugin)->updateCosts(costmap_, x0, y0, xn, yn);
+      (*plugin)->updateCosts(&actions, costmap_, x0, y0, xn, yn);
     }
   }
+
+  // actions.writeToFile("/tmp/actions.txt");
 
   bx0_ = x0;
   bxn_ = xn;
@@ -129,7 +135,6 @@ void LayeredCostmap::updateMap(double robot_x, double robot_y, double robot_yaw)
   byn_ = yn;
 
   initialized_ = true;
-
 }
 
 bool LayeredCostmap::isCurrent()
@@ -143,11 +148,10 @@ bool LayeredCostmap::isCurrent()
   return current_;
 }
 
-/** @brief Call setFootprint() on all plugins. */
 void LayeredCostmap::setFootprint(const std::vector<geometry_msgs::Point>& footprint_spec)
 {
   footprint_ = footprint_spec;
-  costmap_2d::calculateMinAndMaxDistances( footprint_spec, inscribed_radius_, circumscribed_radius_ );
+  costmap_2d::calculateMinAndMaxDistances(footprint_spec, inscribed_radius_, circumscribed_radius_);
 
   for (vector<boost::shared_ptr<Layer> >::iterator plugin = plugins_.begin(); plugin != plugins_.end();
       ++plugin)
@@ -156,4 +160,4 @@ void LayeredCostmap::setFootprint(const std::vector<geometry_msgs::Point>& footp
   }
 }
 
-} // namespace layered_costmap
+}  // namespace costmap_2d

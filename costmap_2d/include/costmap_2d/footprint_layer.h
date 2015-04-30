@@ -35,8 +35,9 @@
  * Author: Eitan Marder-Eppstein
  *         David V. Lu!!
  *********************************************************************/
-#ifndef FOOTPRINT_COSTMAP_PLUGIN_H_
-#define FOOTPRINT_COSTMAP_PLUGIN_H_
+#ifndef COSTMAP_2D_FOOTPRINT_LAYER_H_
+#define COSTMAP_2D_FOOTPRINT_LAYER_H_
+
 #include <ros/ros.h>
 #include <costmap_2d/layer.h>
 #include <costmap_2d/layered_costmap.h>
@@ -49,6 +50,7 @@
 
 namespace costmap_2d
 {
+
 class FootprintLayer : public Layer
 {
 public:
@@ -57,7 +59,8 @@ public:
 
   virtual void updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y, double* max_x,
                              double* max_y);
-  virtual void updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, int min_j, int max_i, int max_j);
+  virtual void updateCosts(LayerActions* layer_actions, costmap_2d::Costmap2D& master_grid, int min_i, int min_j, int max_i, int max_j);
+
 
 private:
   geometry_msgs::PolygonStamped footprint_; ///< Storage for polygon being published.
@@ -65,7 +68,15 @@ private:
   void reconfigureCB(costmap_2d::GenericPluginConfig &config, uint32_t level);
   ros::Publisher footprint_pub_;
   dynamic_reconfigure::Server<costmap_2d::GenericPluginConfig> *dsrv_;
+
+
+  double fl_min_x_; ///< @brief FootprintLayer bounding box in world coordinates
+  double fl_min_y_; ///< @brief FootprintLayer bounding box in world coordinates
+  double fl_max_x_; ///< @brief FootprintLayer bounding box in world coordinates
+  double fl_max_y_; ///< @brief FootprintLayer bounding box in world coordinates
 };
-}
-#endif
+
+}  // namespace costmap_2d
+
+#endif  // COSTMAP_2D_FOOTPRINT_LAYER_H_
 

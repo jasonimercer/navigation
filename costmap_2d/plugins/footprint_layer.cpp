@@ -1,8 +1,46 @@
-#include<costmap_2d/footprint_layer.h>
-#include<costmap_2d/footprint.h>
-#include<string>
-#include<sstream>
+/*********************************************************************
+ *
+ * Software License Agreement (BSD License)
+ *
+ *  Copyright (c) 2008, 2013, Willow Garage, Inc.
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the following
+ *     disclaimer in the documentation and/or other materials provided
+ *     with the distribution.
+ *   * Neither the name of Willow Garage, Inc. nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *  POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Author: Eitan Marder-Eppstein
+ *         David V. Lu!!
+ *********************************************************************/
+#include <costmap_2d/footprint_layer.h>
+#include <costmap_2d/footprint.h>
+#include <string>
+#include <sstream>
 #include <pluginlib/class_list_macros.h>
+
 PLUGINLIB_EXPORT_CLASS(costmap_2d::FootprintLayer, costmap_2d::Layer)
 
 namespace costmap_2d
@@ -60,13 +98,38 @@ namespace costmap_2d
       *max_y = std::max(py, *max_y);
     }
     footprint_pub_.publish( footprint_ );
+
+    // footprint bounding box in world coordinates
+    fl_min_x_ = *min_x;
+    fl_min_y_ = *min_y;
+    fl_max_x_ = *max_x;
+    fl_max_y_ = *max_y;
   }
 
-  void FootprintLayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, int min_j, int max_i, int max_j)
+  void FootprintLayer::updateCosts(LayerActions* layer_actions, costmap_2d::Costmap2D& master_grid, int min_i, int min_j, int max_i, int max_j)
   {
     if(!enabled_) return;
+
+    // convert footprint bounding box to cell coordinates
+    int min_x, min_y;
+    int max_x, max_y;
+    master_grid.worldToMapEnforceBounds(fl_min_x_, fl_min_y_, min_x, min_y);
+    master_grid.worldToMapEnforceBounds(fl_max_x_, fl_max_y_, max_x, max_y);
+
+    // The footprint deletes data in the polygon on the master grid
+    if(layer_actions)
+      layer_actions->addAction(
+            AABB(min_x, min_y, max_x, max_y),
+            &master_grid,
+            LayerActions::MODIFY,
+            __FILE__, __LINE__);
+
+    FILE* f = fopen("/tmp/dump.txt", "a");
+    fprintf(f, "master grid pointer: %p\n", &master_grid);
+    fclose(f);
+
     std::vector<geometry_msgs::Point> footprint_points = costmap_2d::toPointVector(footprint_.polygon);
     master_grid.setConvexPolygonCost(footprint_points, costmap_2d::FREE_SPACE);
   }
-}
 
+}  // namespace costmap_2d

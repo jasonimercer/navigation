@@ -35,20 +35,21 @@
  * Author: Eitan Marder-Eppstein
  *         David V. Lu!!
  *********************************************************************/
-#ifndef COSTMAP_LAYER_H_
-#define COSTMAP_LAYER_H_
+#ifndef COSTMAP_2D_COSTMAP_LAYER_H_
+#define COSTMAP_2D_COSTMAP_LAYER_H_
 #include <ros/ros.h>
 #include <costmap_2d/layer.h>
 #include <costmap_2d/layered_costmap.h>
 
 namespace costmap_2d
 {
+
 class CostmapLayer : public Layer, public Costmap2D
 {
 public:
   CostmapLayer() : has_extra_bounds_(false), 
-    extra_min_x_( 1e6), extra_min_y_( 1e6),
-    extra_max_x_(-1e6), extra_max_y_(-1e6) {}
+    extra_min_x_( 1e6), extra_max_x_(-1e6),
+    extra_min_y_( 1e6), extra_max_y_(-1e6) {}
 
   bool isDiscretized()
   {
@@ -143,8 +144,8 @@ protected:
   
 private:
   double extra_min_x_, extra_max_x_, extra_min_y_, extra_max_y_;
-  
 };
-}
-#endif
 
+}  // namespace costmap_2d
+
+#endif  // COSTMAP_2D_COSTMAP_LAYER_H_

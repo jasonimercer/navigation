@@ -35,8 +35,9 @@
  * Author: Eitan Marder-Eppstein
  *         David V. Lu!!
  *********************************************************************/
-#ifndef INFLATION_COSTMAP_PLUGIN_H_
-#define INFLATION_COSTMAP_PLUGIN_H_
+#ifndef COSTMAP_2D_INFLATION_LAYER_H_
+#define COSTMAP_2D_INFLATION_LAYER_H_
+
 #include <ros/ros.h>
 #include <costmap_2d/layer.h>
 #include <costmap_2d/layered_costmap.h>
@@ -90,14 +91,47 @@ public:
   virtual ~InflationLayer()
   {
     deleteKernels();
-    if(dsrv_)
+    if (dsrv_)
         delete dsrv_;
   }
 
   virtual void onInitialize();
-  virtual void updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y, double* max_x,
-                             double* max_y);
-  virtual void updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, int min_j, int max_i, int max_j);
+  virtual void updateBounds(double robot_x, double robot_y, double robot_yaw,
+                            double* min_x, double* min_y, double* max_x, double* max_y);
+
+  /** @brief Apply inflation to master_grid using the supplied actions to only inflate the required regions
+    * @param layer_actions Sequence of actions that the previous layer plugins have applied.
+    * @param master_grid Costmap2D to operate on
+    * @param min_i Window bounds to apply inflation
+    * @param min_j Window bounds to apply inflation
+    * @param max_i Window bounds to apply inflation
+    * @param max_j Window bounds to apply inflation
+    */
+  virtual void updateCosts(LayerActions *layer_actions, Costmap2D &master_grid,
+                           int min_i, int min_j, int max_i, int max_j);
+
+  virtual void updateCosts(Costmap2D &master_grid, int min_i, int min_j, int max_i, int max_j);
+
+  /** @brief Apply inflation to master_grid using the Priority Queue method
+    * @param master_grid Costmap2D to operate on
+    * @param min_i Window bounds to apply inflation
+    * @param min_j Window bounds to apply inflation
+    * @param max_i Window bounds to apply inflation
+    * @param max_j Window bounds to apply inflation
+    */
+  virtual void updateCostsPQ(Costmap2D &master_grid, int min_i, int min_j, int max_i, int max_j);
+
+
+  /** @brief Apply inflation to master_grid using the Overlay method
+    * @param master_grid Costmap2D to operate on
+    * @param min_i Window bounds to apply inflation
+    * @param min_j Window bounds to apply inflation
+    * @param max_i Window bounds to apply inflation
+    * @param max_j Window bounds to apply inflation
+    */
+  virtual void updateCostsOverlay(Costmap2D &master_grid, int min_i, int min_j, int max_i, int max_j);
+
+
   virtual bool isDiscretized()
   {
     return true;
@@ -118,7 +152,7 @@ public:
       cost = INSCRIBED_INFLATED_OBSTACLE;
     else
     {
-      //make sure cost falls off by Euclidean distance
+      // make sure cost falls off by Euclidean distance
       double euclidean_distance = distance * resolution_;
       double factor = exp(-1.0 * weight_ * (euclidean_distance - inscribed_radius_));
       cost = (unsigned char)((INSCRIBED_INFLATED_OBSTACLE - 1) * factor);
@@ -170,6 +204,12 @@ private:
     return layered_costmap_->getCostmap()->cellDistance(world_dist);
   }
 
+  double getResolution() const
+  {
+    return layered_costmap_->getCostmap()->getResolution();
+  }
+
+
   inline void enqueue(unsigned char* grid, unsigned int index, unsigned int mx, unsigned int my, unsigned int src_x,
                       unsigned int src_y);
 
@@ -181,15 +221,27 @@ private:
   double resolution_;
 
   bool* seen_;
+  int seen_size_;
 
   unsigned char** cached_costs_;
   double** cached_distances_;
 
+  /// @brief Inflated region about a single fatal point
+  sp_Costmap2D cached_kernel_;
+
+  /// @brief Center cell of cached kernel
+  unsigned int cached_kernel_cnx_;
+  unsigned int cached_kernel_cny_;
+
+  bool cached_kernel_inflated_;
+
+
   dynamic_reconfigure::Server<costmap_2d::InflationPluginConfig> *dsrv_;
   void reconfigureCB(costmap_2d::InflationPluginConfig &config, uint32_t level);
 
-  bool need_reinflation_; ///< Indicates that the entire costmap should be reinflated next time around.
+  bool need_reinflation_;  ///< Indicates that the entire costmap should be reinflated next time around.
 };
-}
-#endif
 
+}  // namespace costmap_2d
+
+#endif  // COSTMAP_2D_INFLATION_LAYER_H_
